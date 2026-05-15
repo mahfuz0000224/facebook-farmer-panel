@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Farmer Panel</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #1877f2; }
+        .stat { font-size: 24px; font-weight: bold; color: #333; }
+        .label { color: #65676b; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h2>User Dashboard</h2>
+    <div class="card">
+        <div class="stat" id="totalTasks">0</div>
+        <div class="label">Total Tasks</div>
+    </div>
+    <div class="card">
+        <div class="stat" id="correctTasks" style="color: green;">0</div>
+        <div class="label">Correct Tasks</div>
+    </div>
+    <div class="card" style="border: 1px solid #ff4d4d;">
+        <div class="stat" id="wrongTasks" style="color: red;">0</div>
+        <div class="label">Wrong Tasks</div>
+    </div>
+
+    <script>
+        const tele = window.Telegram.WebApp;
+        tele.expand();
+        // এখানে পরে আমরা আপনার গুগল শিটের ডাটা কানেক্ট করব
+    </script>
+</body>
+</html>
