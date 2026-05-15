@@ -3,124 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sheet Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+    <title>ID Submitter</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #1877f2; --bg: #f0f2f5; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 0; overflow: hidden; }
-        .header { background: var(--primary); color: white; padding: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #sheet-container { height: calc(100vh - 160px); width: 100%; overflow: hidden; background: white; }
-        .footer { padding: 10px; background: white; border-top: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; }
-        .btn { border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
-        .btn-submit { background: var(--primary); color: white; }
-        .btn-add { background: #e4e6eb; color: #050505; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .header { background: var(--primary); color: white; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
         
-        /* Loading Overlay */
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
-        .progress-container { width: 70%; background: #eee; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.2s; }
+        /* পেস্ট বক্স */
+        .paste-box { width: 100%; height: 80px; border: 2px dashed var(--primary); border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; outline: none; }
+        
+        .container { background: white; border-radius: 8px; overflow-x: auto; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; min-width: 320px; }
+        th { background: #f0f2f5; padding: 8px; border: 1px solid #ddd; font-size: 12px; }
+        td { border: 1px solid #ddd; padding: 0; }
+        input { width: 100%; border: none; padding: 10px 5px; outline: none; font-size: 12px; text-align: center; background: transparent; box-sizing: border-box; }
+        
+        .footer { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .btn { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-submit { background: var(--primary); color: white; }
+        
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
+        .progress-bar { width: 80%; height: 12px; background: #eee; border-radius: 10px; overflow: hidden; margin: 20px 0; }
+        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: 0.1s; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <div id="loadingText">Processing IDs...</div>
-    <div class="progress-container"><div class="progress-bar" id="pb"></div></div>
-    <div id="statusText" style="font-size:12px">0 of 0</div>
-    <div id="finalMsg" style="font-weight:bold; color:#2ecc71; margin-top:10px"></div>
+    <div style="font-weight:bold" id="statusMsg">Sending IDs...</div>
+    <div class="progress-bar"><div class="progress-fill" id="pf"></div></div>
+    <div id="countText">0 of 0</div>
 </div>
 
 <div class="header">
-    <div style="font-weight:bold; font-size:18px">ID SUBMIT PANEL</div>
-    <div style="font-size:11px">Minimum 10 IDs Required</div>
+    <strong>ID SUBMISSION PANEL</strong><br>
+    <small>Paste from Sheet below</small>
 </div>
 
-<div id="sheet-container"></div>
+<textarea class="paste-box" id="paster" placeholder="এখানে শিট থেকে কপি করে পেস্ট করুন..."></textarea>
+
+<div class="container">
+    <table id="myTable">
+        <thead>
+            <tr>
+                <th width="10%">SL</th>
+                <th>UID</th>
+                <th>Password</th>
+                <th>2FA</th>
+            </tr>
+        </thead>
+        <tbody id="tb"></tbody>
+    </table>
+</div>
 
 <div class="footer">
-    <button class="btn btn-add" id="addRowBtn">+ Add 20 More Rows</button>
-    <button class="btn btn-submit" id="submitBtn">SUBMIT ALL ID</button>
+    <button class="btn btn-submit" onclick="finalSubmit()">SUBMIT ALL ID</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    const container = document.querySelector('#sheet-container');
-    
-    // শুরুতেই ৫০টি খালি রো দিয়ে শিট তৈরি
-    const initialData = Array.from({ length: 50 }, () => ["", "", ""]);
-
-    const hot = new Handsontable(container, {
-        data: initialData,
-        colHeaders: ['UID', 'PASSWORD', '2FA KEY'],
-        rowHeaders: true,
-        height: '100%',
-        width: '100%',
-        stretchH: 'all',
-        colWidths: [120, 100, 150],
-        manualColumnResize: true,
-        contextMenu: true,
-        licenseKey: 'non-commercial-and-evaluation',
-        copyPaste: true, // কপি-পেস্ট এনাবেল করা হলো
-        cells(row, col) {
-            const cellProperties = {};
-            cellProperties.className = 'htCenter htMiddle';
-            return cellProperties;
+    // শুরুতে ১০টি খালি ঘর
+    function initRows(n) {
+        const tb = document.getElementById('tb');
+        for(let i=1; i<=n; i++) {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td>${i}</td><td><input class="u"></td><td><input class="p"></td><td><input class="t"></td>`;
+            tb.appendChild(tr);
         }
-    });
+    }
+    initRows(10);
 
-    // ২০ টি রো বাড়ানোর লজিক
-    document.getElementById('addRowBtn').addEventListener('click', () => {
-        hot.alter('insert_row_below', hot.countRows(), 20);
-    });
+    // পেস্ট বক্সের লজিক - ম্যাজিকের মতো ডাটা ভাগ হবে
+    document.getElementById('paster').addEventListener('input', function(e) {
+        let val = e.target.value.trim();
+        if(!val) return;
 
-    // সাবমিট লজিক
-    document.getElementById('submitBtn').addEventListener('click', () => {
-        const fullData = hot.getData();
-        let submissionList = [];
+        let rows = val.split(/\r?\n/);
+        const tb = document.getElementById('tb');
+        tb.innerHTML = ""; // আগের সব ক্লিয়ার
 
-        fullData.forEach(row => {
-            if (row[0] && row[0].toString().trim() !== "") {
-                submissionList.push({
-                    u: row[0].toString().trim(),
-                    p: (row[1] || "").toString().trim(),
-                    t: (row[2] || "").toString().trim()
-                });
-            }
+        rows.forEach((row, index) => {
+            // ট্যাব বা একাধিক স্পেস দিয়ে স্লিট করা
+            let cols = row.split(/\t+| {2,}/); 
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index+1}</td>
+                <td><input class="u" value="${cols[0] || ''}"></td>
+                <td><input class="p" value="${cols[1] || ''}"></td>
+                <td><input class="t" value="${cols[2] || ''}"></td>
+            `;
+            tb.appendChild(tr);
         });
+        
+        // পেস্ট করার পর বক্সটা খালি করে দেওয়া (যাতে হিজিবিজি না লাগে)
+        setTimeout(() => { e.target.value = ""; }, 1000);
+    });
 
-        if (submissionList.length < 10) {
-            alert("কমপক্ষে ১০ টি আইডি দিন। আপনি দিয়েছেন: " + submissionList.length);
-            return;
+    function finalSubmit() {
+        let us = document.querySelectorAll('.u');
+        let ps = document.querySelectorAll('.p');
+        let ts = document.querySelectorAll('.t');
+        let data = [];
+
+        for(let i=0; i<us.length; i++) {
+            if(us[i].value.trim() !== "") {
+                data.push({u: us[i].value.trim(), p: ps[i].value.trim(), t: ts[i].value.trim()});
+            }
         }
 
-        // ডুপ্লিকেট রিমুভ (UID এর ওপর ভিত্তি করে)
-        const uniqueData = submissionList.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
+        if(data.length < 10) { alert("Minimum 10 IDs! You have: " + data.length); return; }
 
-        // সাবমিশন প্রসেস শুরু
-        document.getElementById('overlay').style.display = 'flex';
-        
+        document.getElementById('overlay').style.display = "flex";
         let i = 0;
-        const total = uniqueData.length;
-        const interval = setInterval(() => {
-            if (i >= total) {
+        let interval = setInterval(() => {
+            if(i >= data.length) {
                 clearInterval(interval);
-                document.getElementById('finalMsg').innerText = "✔ ID Submit Successful";
-                
-                // Bots.Business এ ডাটা পাঠানো
-                tg.sendData(JSON.stringify(uniqueData));
-                
-                setTimeout(() => { location.reload(); }, 2500);
+                document.getElementById('statusMsg').innerText = "✔ ID Submit Successful";
+                tg.sendData(JSON.stringify(data));
+                setTimeout(() => { location.reload(); }, 2000);
                 return;
             }
             i++;
-            document.getElementById('pb').style.width = (i/total)*100 + "%";
-            document.getElementById('statusText').innerText = "Sending " + i + " of " + total;
-        }, 80);
-    });
+            document.getElementById('pf').style.width = (i/data.length)*100 + "%";
+            document.getElementById('countText').innerText = i + " of " + data.length;
+        }, 100);
+    }
 </script>
 
 </body>
