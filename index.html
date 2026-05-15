@@ -3,35 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Farmer Panel</title>
+    <title>Facebook Farmer Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #1877f2; }
-        .stat { font-size: 24px; font-weight: bold; color: #333; }
-        .label { color: #65676b; font-size: 14px; }
+        :root { --primary: #1877f2; --success: #2ecc71; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Arial; background: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .header { background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #e7effa; padding: 12px 5px; text-align: left; border-bottom: 2px solid var(--primary); }
+        td { border-bottom: 1px solid #eee; padding: 5px; }
+        input { width: 95%; border: none; padding: 8px 5px; outline: none; background: transparent; }
+        input:focus { background: #f9fbff; border-radius: 4px; }
+        .controls { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-add { background: #e4e6eb; color: #050505; }
+        .btn-submit { background: var(--primary); color: white; font-size: 16px; }
+        
+        /* Loading Overlay */
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
+        .progress-container { width: 80%; background: #eee; border-radius: 20px; height: 20px; margin: 20px 0; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #1877f2, #2ecc71); transition: 0.3s; }
+        .success-icon { font-size: 80px; color: var(--success); display: none; animation: scaleUp 0.5s ease; }
+        @keyframes scaleUp { from {transform: scale(0);} to {transform: scale(1);} }
     </style>
 </head>
 <body>
-    <h2>User Dashboard</h2>
-    <div class="card">
-        <div class="stat" id="totalTasks">0</div>
-        <div class="label">Total Tasks</div>
-    </div>
-    <div class="card">
-        <div class="stat" id="correctTasks" style="color: green;">0</div>
-        <div class="label">Correct Tasks</div>
-    </div>
-    <div class="card" style="border: 1px solid #ff4d4d;">
-        <div class="stat" id="wrongTasks" style="color: red;">0</div>
-        <div class="label">Wrong Tasks</div>
-    </div>
 
-    <script>
-        const tele = window.Telegram.WebApp;
-        tele.expand();
-        // এখানে পরে আমরা আপনার গুগল শিটের ডাটা কানেক্ট করব
-    </script>
+<div id="overlay">
+    <div id="loadingText">Processing IDs...</div>
+    <div class="progress-container"><div class="progress-bar" id="pb"></div></div>
+    <div id="statusText">Sending 0 of 0</div>
+    <div class="success-icon" id="check">✔</div>
+    <div id="finalMsg" style="font-weight: bold; margin-top: 10px;"></div>
+</div>
+
+<div class="header">
+    <h2 style="margin:0">User Dashboard</h2>
+    <small>Fill minimum 10 IDs to Submit</small>
+</div>
+
+<div class="container">
+    <table>
+        <thead>
+            <tr>
+                <th width="10%">SL</th>
+                <th>UID</th>
+                <th>Password</th>
+                <th>2FA Key</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    
+    <div class="controls">
+        <button class="btn btn-add" onclick="addRows(20)">➕ Add 20 Rows</button>
+        <button class="btn btn-submit" onclick="startSubmit()">SUBMIT ALL ID</button>
+    </div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    let rowCount = 0;
+
+    // ৫টি রো তৈরি করার ফাংশন
+    function addRows(count) {
+        const body = document.getElementById('tableBody');
+        for (let i = 0; i < count; i++) {
+            rowCount++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="color:#999; text-align:center">${rowCount}</td>
+                <td><input type="text" class="uid-in" onpaste="handlePaste(event)"></td>
+                <td><input type="text" class="pass-in"></td>
+                <td><input type="text" class="twofa-in"></td>
+            `;
+            body.appendChild(tr);
+        }
+    }
+
+    // স্মার্ট পেস্ট লজিক
+    function handlePaste(e) {
+        e.preventDefault();
+        const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+        const lines = clipboardData.split(/\r?\n/);
+        const currentRow = e.target.closest('tr');
+        let nextRow = currentRow;
+
+        lines.forEach(line => {
+            if (!nextRow) return;
+            const parts = line.split(/\s+|\||:/); // স্পেস, পাইপ বা কোলন দিয়ে ভাগ করবে
+            const inputs = nextRow.querySelectorAll('input');
+            if (parts[0]) inputs[0].value = parts[0];
+            if (parts[1]) inputs[1].value = parts[1];
+            if (parts[2]) inputs[2].value = parts[2];
+            nextRow = nextRow.nextElementSibling;
+        });
+    }
+
+    function startSubmit() {
+        const uids = document.querySelectorAll('.uid-in');
+        const passes = document.querySelectorAll('.pass-in');
+        const twofas = document.querySelectorAll('.twofa-in');
+        
+        let dataToSend = [];
+        for (let i = 0; i < uids.length; i++) {
+            if (uids[i].value.trim() !== "") {
+                dataToSend.push({
+                    u: uids[i].value.trim(),
+                    p: passes[i].value.trim(),
+                    t: twofas[i].value.trim()
+                });
+            }
+        }
+
+        if (dataToSend.length < 10) {
+            alert("সর্বনিম্ন ১০ টি আইডি সাবমিট করতে হবে। আপনি দিয়েছেন: " + dataToSend.length);
+            return;
+        }
+
+        // ইউজার আইডি ডুপ্লিকেট রিমুভ
+        const uniqueData = dataToSend.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
+
+        // ওভারলে দেখানো
+        document.getElementById('overlay').style.display = 'flex';
+        processSending(uniqueData);
+    }
+
+    function processSending(data) {
+        let i = 0;
+        const total = data.length;
+        const pb = document.getElementById('pb');
+        const statusText = document.getElementById('statusText');
+
+        const interval = setInterval(() => {
+            if (i >= total) {
+                clearInterval(interval);
+                showSuccess();
+                // ডাটা টেলিগ্রাম বটে পাঠানো
+                tg.sendData(JSON.stringify(data));
+                return;
+            }
+            i++;
+            let percent = (i / total) * 100;
+            pb.style.width = percent + "%";
+            statusText.innerText = "Sending ID " + i + " of " + total;
+        }, 150); // প্রতি মেসেজের মাঝে সামান্য গ্যাপ
+    }
+
+    function showSuccess() {
+        document.getElementById('loadingText').style.display = 'none';
+        document.getElementById('statusText').style.display = 'none';
+        document.querySelector('.progress-container').style.display = 'none';
+        document.getElementById('check').style.display = 'block';
+        document.getElementById('finalMsg').innerText = "ID Submit Successful";
+        document.getElementById('finalMsg').style.color = "#2ecc71";
+        
+        setTimeout(() => {
+            // প্যানেল ফ্রেশ করা
+            location.reload();
+        }, 3000);
+    }
+
+    // শুরুতে ৫০টি রো লোড করা
+    addRows(50);
+</script>
+
 </body>
 </html>
