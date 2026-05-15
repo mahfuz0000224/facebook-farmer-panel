@@ -3,126 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ID Submit Panel</title>
+    <title>Sheet Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #1877f2; --success: #2ecc71; --bg: #f4f4f9; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 5px; }
-        .header { background: var(--primary); color: white; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; }
-        .container { background: white; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th { background: #f0f2f5; padding: 6px 2px; border: 1px solid #ddd; font-size: 11px; color: #555; }
-        td { border: 1px solid #ddd; padding: 0; }
-        input { width: 100%; border: none; padding: 8px 3px; outline: none; font-size: 12px; text-align: center; box-sizing: border-box; background: transparent; }
-        input:focus { background: #f0f7ff; }
-        .controls { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .btn { border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-add { background: #ebedf0; color: #444; }
+        :root { --primary: #1877f2; --bg: #f0f2f5; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 0; overflow: hidden; }
+        .header { background: var(--primary); color: white; padding: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #sheet-container { height: calc(100vh - 160px); width: 100%; overflow: hidden; background: white; }
+        .footer { padding: 10px; background: white; border-top: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; }
+        .btn { border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
         .btn-submit { background: var(--primary); color: white; }
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-add { background: #e4e6eb; color: #050505; }
+        
+        /* Loading Overlay */
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         .progress-container { width: 70%; background: #eee; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: var(--primary); }
+        .progress-bar { width: 0%; height: 100%; background: var(--primary); transition: 0.2s; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <div id="loadingText" style="font-size:14px">Processing...</div>
+    <div id="loadingText">Processing IDs...</div>
     <div class="progress-container"><div class="progress-bar" id="pb"></div></div>
     <div id="statusText" style="font-size:12px">0 of 0</div>
-    <div id="check" style="font-size:40px; display:none; color:var(--success)">✔</div>
-    <div id="finalMsg" style="font-size:14px; font-weight:bold; margin-top:5px;"></div>
+    <div id="finalMsg" style="font-weight:bold; color:#2ecc71; margin-top:10px"></div>
 </div>
 
 <div class="header">
-    <div style="font-weight:bold; font-size:16px">ID SUBMISSION PANEL</div>
-    <div style="font-size:10px">Minimum 10 IDs</div>
+    <div style="font-weight:bold; font-size:18px">ID SUBMIT PANEL</div>
+    <div style="font-size:11px">Minimum 10 IDs Required</div>
 </div>
 
-<div class="container">
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 12%;">SL</th>
-                <th>UID</th>
-                <th>Pass</th>
-                <th>2FA</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
-    
-    <div class="controls">
-        <button class="btn btn-add" onclick="addRows(20)">+ 20 Rows</button>
-        <button class="btn btn-submit" onclick="startSubmit()">SUBMIT ALL ID</button>
-    </div>
+<div id="sheet-container"></div>
+
+<div class="footer">
+    <button class="btn btn-add" id="addRowBtn">+ Add 20 More Rows</button>
+    <button class="btn btn-submit" id="submitBtn">SUBMIT ALL ID</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    let rowCount = 0;
 
-    function addRows(count) {
-        const body = document.getElementById('tableBody');
-        for (let i = 0; i < count; i++) {
-            rowCount++;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="text-align:center; background:#fafafa; font-size:10px; color:#888;">${rowCount}</td>
-                <td><input type="text" class="uid-in" placeholder="UID"></td>
-                <td><input type="text" class="pass-in" placeholder="Pass"></td>
-                <td><input type="text" class="twofa-in" placeholder="2FA"></td>
-            `;
-            body.appendChild(tr);
+    const container = document.querySelector('#sheet-container');
+    
+    // শুরুতেই ৫০টি খালি রো দিয়ে শিট তৈরি
+    const initialData = Array.from({ length: 50 }, () => ["", "", ""]);
+
+    const hot = new Handsontable(container, {
+        data: initialData,
+        colHeaders: ['UID', 'PASSWORD', '2FA KEY'],
+        rowHeaders: true,
+        height: '100%',
+        width: '100%',
+        stretchH: 'all',
+        colWidths: [120, 100, 150],
+        manualColumnResize: true,
+        contextMenu: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        copyPaste: true, // কপি-পেস্ট এনাবেল করা হলো
+        cells(row, col) {
+            const cellProperties = {};
+            cellProperties.className = 'htCenter htMiddle';
+            return cellProperties;
         }
-        setupPasteListeners();
-    }
+    });
 
-    function setupPasteListeners() {
-        document.querySelectorAll('.uid-in').forEach(input => {
-            input.onpaste = function(e) {
-                e.preventDefault();
-                let text = (e.clipboardData || window.clipboardData).getData('text');
-                let rows = text.split(/\r?\n/);
-                let currentRow = this.closest('tr');
+    // ২০ টি রো বাড়ানোর লজিক
+    document.getElementById('addRowBtn').addEventListener('click', () => {
+        hot.alter('insert_row_below', hot.countRows(), 20);
+    });
 
-                rows.forEach(row => {
-                    if (!currentRow || row.trim() === "") return;
-                    
-                    // ট্যাব, পাইপ, কোলন অথবা ২ বা তার বেশি স্পেস দিয়ে ডাটা স্লিট করা
-                    let columns = row.split(/\t+|\||:|\s{2,}/).map(c => c.trim()).filter(c => c !== "");
-                    
-                    let inputs = currentRow.querySelectorAll('input');
-                    if (columns[0]) inputs[0].value = columns[0];
-                    if (columns[1]) inputs[1].value = columns[1];
-                    if (columns[2]) inputs[2].value = columns[2];
+    // সাবমিট লজিক
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        const fullData = hot.getData();
+        let submissionList = [];
 
-                    currentRow = currentRow.nextElementSibling;
+        fullData.forEach(row => {
+            if (row[0] && row[0].toString().trim() !== "") {
+                submissionList.push({
+                    u: row[0].toString().trim(),
+                    p: (row[1] || "").toString().trim(),
+                    t: (row[2] || "").toString().trim()
                 });
-            };
-        });
-    }
-
-    function startSubmit() {
-        const uids = document.querySelectorAll('.uid-in');
-        const passes = document.querySelectorAll('.pass-in');
-        const twofas = document.querySelectorAll('.twofa-in');
-        let dataList = [];
-        
-        for (let i = 0; i < uids.length; i++) {
-            let u = uids[i].value.trim();
-            if (u !== "") {
-                dataList.push({ u: u, p: passes[i].value.trim(), t: twofas[i].value.trim() });
             }
-        }
+        });
 
-        if (dataList.length < 10) {
-            alert("Minimum 10 IDs! Current: " + dataList.length);
+        if (submissionList.length < 10) {
+            alert("কমপক্ষে ১০ টি আইডি দিন। আপনি দিয়েছেন: " + submissionList.length);
             return;
         }
 
-        const uniqueData = dataList.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
+        // ডুপ্লিকেট রিমুভ (UID এর ওপর ভিত্তি করে)
+        const uniqueData = submissionList.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
+
+        // সাবমিশন প্রসেস শুরু
         document.getElementById('overlay').style.display = 'flex';
         
         let i = 0;
@@ -130,22 +108,20 @@
         const interval = setInterval(() => {
             if (i >= total) {
                 clearInterval(interval);
-                document.getElementById('check').style.display = 'block';
-                document.getElementById('finalMsg').innerText = "ID Submit Successful";
+                document.getElementById('finalMsg').innerText = "✔ ID Submit Successful";
                 
-                // Bots.Business ডাটা পাঠানো
+                // Bots.Business এ ডাটা পাঠানো
                 tg.sendData(JSON.stringify(uniqueData));
-
-                setTimeout(() => { location.reload(); }, 2000);
+                
+                setTimeout(() => { location.reload(); }, 2500);
                 return;
             }
             i++;
             document.getElementById('pb').style.width = (i/total)*100 + "%";
             document.getElementById('statusText').innerText = "Sending " + i + " of " + total;
         }, 80);
-    }
-
-    addRows(50);
+    });
 </script>
+
 </body>
 </html>
