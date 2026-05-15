@@ -3,62 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Farmer Dashboard</title>
+    <title>Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #1877f2; --success: #2ecc71; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', Arial; background: var(--bg); margin: 0; padding: 10px; color: #333; }
-        .header { background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #e7effa; padding: 12px 5px; text-align: left; border-bottom: 2px solid var(--primary); }
-        td { border-bottom: 1px solid #eee; padding: 5px; }
-        input { width: 95%; border: none; padding: 8px 5px; outline: none; background: transparent; }
-        input:focus { background: #f9fbff; border-radius: 4px; }
-        .controls { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-add { background: #e4e6eb; color: #050505; }
-        .btn-submit { background: var(--primary); color: white; font-size: 16px; }
+        :root { --primary: #1877f2; --success: #2ecc71; --bg: #f4f4f9; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 5px; }
+        .header { background: var(--primary); color: white; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 8px; }
+        .container { background: white; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); overflow: hidden; }
         
-        /* Loading Overlay */
+        /* টেবিল একদম কম্প্যাক্ট করার জন্য */
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { background: #f0f2f5; padding: 6px 2px; border: 1px solid #ddd; font-size: 11px; color: #555; }
+        td { border: 1px solid #ddd; padding: 0; }
+        
+        /* ইনপুট বক্স ছোট করা */
+        input { 
+            width: 100%; 
+            border: none; 
+            padding: 8px 3px; 
+            outline: none; 
+            font-size: 12px; 
+            text-align: center;
+            box-sizing: border-box;
+        }
+        input::placeholder { color: #ccc; font-size: 10px; }
+        input:focus { background: #f0f7ff; }
+
+        .controls { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .btn { border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-add { background: #ebedf0; color: #444; }
+        .btn-submit { background: var(--primary); color: white; }
+        
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
-        .progress-container { width: 80%; background: #eee; border-radius: 20px; height: 20px; margin: 20px 0; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #1877f2, #2ecc71); transition: 0.3s; }
-        .success-icon { font-size: 80px; color: var(--success); display: none; animation: scaleUp 0.5s ease; }
-        @keyframes scaleUp { from {transform: scale(0);} to {transform: scale(1);} }
+        .progress-container { width: 70%; background: #eee; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--primary); }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <div id="loadingText">Processing IDs...</div>
+    <div id="loadingText" style="font-size:14px">Processing...</div>
     <div class="progress-container"><div class="progress-bar" id="pb"></div></div>
-    <div id="statusText">Sending 0 of 0</div>
-    <div class="success-icon" id="check">✔</div>
-    <div id="finalMsg" style="font-weight: bold; margin-top: 10px;"></div>
+    <div id="statusText" style="font-size:12px">0 of 0</div>
+    <div id="check" style="font-size:40px; display:none; color:var(--success)">✔</div>
+    <div id="finalMsg" style="font-size:14px; font-weight:bold"></div>
 </div>
 
 <div class="header">
-    <h2 style="margin:0">User Dashboard</h2>
-    <small>Fill minimum 10 IDs to Submit</small>
+    <div style="font-weight:bold; font-size:16px">ID SUBMIT</div>
+    <div style="font-size:10px">Minimum 10 IDs</div>
 </div>
 
 <div class="container">
     <table>
         <thead>
             <tr>
-                <th width="10%">SL</th>
+                <th style="width: 12%;">SL</th>
                 <th>UID</th>
-                <th>Password</th>
-                <th>2FA Key</th>
+                <th>Pass</th>
+                <th>2FA</th>
             </tr>
         </thead>
         <tbody id="tableBody"></tbody>
     </table>
     
     <div class="controls">
-        <button class="btn btn-add" onclick="addRows(20)">➕ Add 20 Rows</button>
-        <button class="btn btn-submit" onclick="startSubmit()">SUBMIT ALL ID</button>
+        <button class="btn btn-add" onclick="addRows(20)">+ 20 Rows</button>
+        <button class="btn btn-submit" onclick="startSubmit()">SUBMIT NOW</button>
     </div>
 </div>
 
@@ -67,23 +78,21 @@
     tg.expand();
     let rowCount = 0;
 
-    // ৫টি রো তৈরি করার ফাংশন
     function addRows(count) {
         const body = document.getElementById('tableBody');
         for (let i = 0; i < count; i++) {
             rowCount++;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="color:#999; text-align:center">${rowCount}</td>
-                <td><input type="text" class="uid-in" onpaste="handlePaste(event)"></td>
-                <td><input type="text" class="pass-in"></td>
-                <td><input type="text" class="twofa-in"></td>
+                <td style="text-align:center; background:#fafafa; font-size:10px; color:#888;">${rowCount}</td>
+                <td><input type="text" class="uid-in" placeholder="UID" onpaste="handlePaste(event)"></td>
+                <td><input type="text" class="pass-in" placeholder="Pass"></td>
+                <td><input type="text" class="twofa-in" placeholder="2FA"></td>
             `;
             body.appendChild(tr);
         }
     }
 
-    // স্মার্ট পেস্ট লজিক
     function handlePaste(e) {
         e.preventDefault();
         const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
@@ -93,7 +102,7 @@
 
         lines.forEach(line => {
             if (!nextRow) return;
-            const parts = line.split(/\s+|\||:/); // স্পেস, পাইপ বা কোলন দিয়ে ভাগ করবে
+            const parts = line.split(/\s+|\||:/); 
             const inputs = nextRow.querySelectorAll('input');
             if (parts[0]) inputs[0].value = parts[0];
             if (parts[1]) inputs[1].value = parts[1];
@@ -106,67 +115,31 @@
         const uids = document.querySelectorAll('.uid-in');
         const passes = document.querySelectorAll('.pass-in');
         const twofas = document.querySelectorAll('.twofa-in');
-        
-        let dataToSend = [];
+        let data = [];
         for (let i = 0; i < uids.length; i++) {
             if (uids[i].value.trim() !== "") {
-                dataToSend.push({
-                    u: uids[i].value.trim(),
-                    p: passes[i].value.trim(),
-                    t: twofas[i].value.trim()
-                });
+                data.push({u: uids[i].value.trim(), p: passes[i].value.trim(), t: twofas[i].value.trim()});
             }
         }
-
-        if (dataToSend.length < 10) {
-            alert("সর্বনিম্ন ১০ টি আইডি সাবমিট করতে হবে। আপনি দিয়েছেন: " + dataToSend.length);
-            return;
-        }
-
-        // ইউজার আইডি ডুপ্লিকেট রিমুভ
-        const uniqueData = dataToSend.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
-
-        // ওভারলে দেখানো
+        if (data.length < 10) { alert("Minimum 10 IDs! You gave: " + data.length); return; }
+        const unique = data.filter((v, i, a) => a.findIndex(t => t.u === v.u) === i);
         document.getElementById('overlay').style.display = 'flex';
-        processSending(uniqueData);
-    }
-
-    function processSending(data) {
-        let i = 0;
-        const total = data.length;
-        const pb = document.getElementById('pb');
-        const statusText = document.getElementById('statusText');
-
+        let i = 0; const total = unique.length;
         const interval = setInterval(() => {
             if (i >= total) {
                 clearInterval(interval);
-                showSuccess();
-                // ডাটা টেলিগ্রাম বটে পাঠানো
-                tg.sendData(JSON.stringify(data));
+                document.getElementById('check').style.display = 'block';
+                document.getElementById('finalMsg').innerText = "ID Submit Successful";
+                document.getElementById('finalMsg').style.color = "#2ecc71";
+                tg.sendData(JSON.stringify(unique));
+                setTimeout(() => { location.reload(); }, 2000);
                 return;
             }
             i++;
-            let percent = (i / total) * 100;
-            pb.style.width = percent + "%";
-            statusText.innerText = "Sending ID " + i + " of " + total;
-        }, 150); // প্রতি মেসেজের মাঝে সামান্য গ্যাপ
+            document.getElementById('pb').style.width = (i/total)*100 + "%";
+            document.getElementById('statusText').innerText = "Sending " + i + " of " + total;
+        }, 150);
     }
-
-    function showSuccess() {
-        document.getElementById('loadingText').style.display = 'none';
-        document.getElementById('statusText').style.display = 'none';
-        document.querySelector('.progress-container').style.display = 'none';
-        document.getElementById('check').style.display = 'block';
-        document.getElementById('finalMsg').innerText = "ID Submit Successful";
-        document.getElementById('finalMsg').style.color = "#2ecc71";
-        
-        setTimeout(() => {
-            // প্যানেল ফ্রেশ করা
-            location.reload();
-        }, 3000);
-    }
-
-    // শুরুতে ৫০টি রো লোড করা
     addRows(50);
 </script>
 
