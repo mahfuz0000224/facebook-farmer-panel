@@ -27,16 +27,16 @@
 <body>
 
 <div id="overlay">
-    <div id="loadingText" style="font-size:14px">Sending to Bot...</div>
+    <div id="loadingText" style="font-size:14px">Processing...</div>
     <div class="progress-container"><div class="progress-bar" id="pb"></div></div>
     <div id="statusText" style="font-size:12px">0 of 0</div>
     <div id="check" style="font-size:40px; display:none; color:var(--success)">✔</div>
-    <div id="finalMsg" style="font-size:14px; font-weight:bold"></div>
+    <div id="finalMsg" style="font-size:14px; font-weight:bold; margin-top:5px;"></div>
 </div>
 
 <div class="header">
     <div style="font-weight:bold; font-size:16px">ID SUBMISSION PANEL</div>
-    <div style="font-size:10px">Minimum 10 IDs Required</div>
+    <div style="font-size:10px">Minimum 10 IDs</div>
 </div>
 
 <div class="container">
@@ -70,34 +70,37 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="text-align:center; background:#fafafa; font-size:10px; color:#888;">${rowCount}</td>
-                <td><input type="text" class="uid-in" placeholder="UID" onpaste="handlePaste(event)"></td>
+                <td><input type="text" class="uid-in" placeholder="UID"></td>
                 <td><input type="text" class="pass-in" placeholder="Pass"></td>
                 <td><input type="text" class="twofa-in" placeholder="2FA"></td>
             `;
             body.appendChild(tr);
         }
+        setupPasteListeners();
     }
 
-    function handlePaste(e) {
-        e.preventDefault();
-        const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
-        const lines = clipboardData.split(/\r?\n/);
-        const currentRow = e.target.closest('tr');
-        let nextRow = currentRow;
+    function setupPasteListeners() {
+        document.querySelectorAll('.uid-in').forEach(input => {
+            input.onpaste = function(e) {
+                e.preventDefault();
+                let text = (e.clipboardData || window.clipboardData).getData('text');
+                let rows = text.split(/\r?\n/);
+                let currentRow = this.closest('tr');
 
-        lines.forEach(line => {
-            if (!nextRow || line.trim() === "") return;
-            // ট্যাব (\t) অথবা পাইপ (|) অথবা একাধিক স্পেস দিয়ে ডাটা ভাগ করবে
-            const parts = line.split(/\t+|\||:/).map(p => p.trim());
-            const inputs = nextRow.querySelectorAll('input');
-            
-            // যদি ট্যাব কাজ না করে, তবে সাধারণ স্পেস দিয়ে ট্রাই করবে
-            let finalParts = parts.length >= 2 ? parts : line.split(/\s{2,}/).map(p => p.trim());
+                rows.forEach(row => {
+                    if (!currentRow || row.trim() === "") return;
+                    
+                    // ট্যাব, পাইপ, কোলন অথবা ২ বা তার বেশি স্পেস দিয়ে ডাটা স্লিট করা
+                    let columns = row.split(/\t+|\||:|\s{2,}/).map(c => c.trim()).filter(c => c !== "");
+                    
+                    let inputs = currentRow.querySelectorAll('input');
+                    if (columns[0]) inputs[0].value = columns[0];
+                    if (columns[1]) inputs[1].value = columns[1];
+                    if (columns[2]) inputs[2].value = columns[2];
 
-            if (finalParts[0]) inputs[0].value = finalParts[0];
-            if (finalParts[1]) inputs[1].value = finalParts[1];
-            if (finalParts[2]) inputs[2].value = finalParts[2];
-            nextRow = nextRow.nextElementSibling;
+                    currentRow = currentRow.nextElementSibling;
+                });
+            };
         });
     }
 
@@ -115,7 +118,7 @@
         }
 
         if (dataList.length < 10) {
-            alert("Minimum 10 IDs required. You entered: " + dataList.length);
+            alert("Minimum 10 IDs! Current: " + dataList.length);
             return;
         }
 
@@ -129,22 +132,19 @@
                 clearInterval(interval);
                 document.getElementById('check').style.display = 'block';
                 document.getElementById('finalMsg').innerText = "ID Submit Successful";
-                document.getElementById('finalMsg').style.color = "#2ecc71";
                 
-                // CRITICAL: Bots.Business এর কমান্ডের সাথে কানেক্ট করা
-                tg.sendData(JSON.stringify({
-                    command: "onIDSubmit", // এই নামে BB তে কমান্ড থাকতে হবে
-                    data: uniqueData
-                }));
+                // Bots.Business ডাটা পাঠানো
+                tg.sendData(JSON.stringify(uniqueData));
 
                 setTimeout(() => { location.reload(); }, 2000);
                 return;
             }
             i++;
             document.getElementById('pb').style.width = (i/total)*100 + "%";
-            document.getElementById('statusText').innerText = "Processing " + i + " of " + total;
-        }, 100);
+            document.getElementById('statusText').innerText = "Sending " + i + " of " + total;
+        }, 80);
     }
+
     addRows(50);
 </script>
 </body>
