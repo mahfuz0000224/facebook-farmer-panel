@@ -2,107 +2,95 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ID Submitter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sheet Panel</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #1877f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; }
-        .header { background: var(--primary); color: white; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
-        
-        /* পেস্ট বক্স */
-        .paste-box { width: 100%; height: 80px; border: 2px dashed var(--primary); border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; outline: none; }
-        
-        .container { background: white; border-radius: 8px; overflow-x: auto; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; min-width: 320px; }
-        th { background: #f0f2f5; padding: 8px; border: 1px solid #ddd; font-size: 12px; }
+        .header { background: var(--primary); color: white; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        .paste-box { width: 100%; height: 60px; border: 2px solid var(--primary); border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 15px; background: #fff; font-size: 14px; }
+        .container { background: white; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 350px; }
+        th { background: #f0f2f5; padding: 8px; border: 1px solid #ddd; font-size: 11px; }
         td { border: 1px solid #ddd; padding: 0; }
-        input { width: 100%; border: none; padding: 10px 5px; outline: none; font-size: 12px; text-align: center; background: transparent; box-sizing: border-box; }
-        
-        .footer { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .btn { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-submit { background: var(--primary); color: white; }
-        
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
-        .progress-bar { width: 80%; height: 12px; background: #eee; border-radius: 10px; overflow: hidden; margin: 20px 0; }
-        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: 0.1s; }
+        input { width: 100%; border: none; padding: 12px 5px; outline: none; font-size: 12px; text-align: center; background: transparent; }
+        .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; margin-top: 15px; font-size: 16px; }
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <div style="font-weight:bold" id="statusMsg">Sending IDs...</div>
-    <div class="progress-bar"><div class="progress-fill" id="pf"></div></div>
-    <div id="countText">0 of 0</div>
+    <h3 id="st">Processing...</h3>
+    <div id="count">0 of 0</div>
 </div>
 
-<div class="header">
-    <strong>ID SUBMISSION PANEL</strong><br>
-    <small>Paste from Sheet below</small>
-</div>
+<div class="header"><strong>ID SUBMISSION PANEL</strong></div>
 
-<textarea class="paste-box" id="paster" placeholder="এখানে শিট থেকে কপি করে পেস্ট করুন..."></textarea>
+<textarea class="paste-box" id="paster" placeholder="গুগল শিট থেকে কপি করে এখানে পেস্ট করুন..."></textarea>
 
 <div class="container">
-    <table id="myTable">
+    <table>
         <thead>
             <tr>
-                <th width="10%">SL</th>
+                <th width="12%">SL</th>
                 <th>UID</th>
                 <th>Password</th>
-                <th>2FA</th>
+                <th>2FA Key</th>
             </tr>
         </thead>
-        <tbody id="tb"></tbody>
+        <tbody id="rows"></tbody>
     </table>
 </div>
 
-<div class="footer">
-    <button class="btn btn-submit" onclick="finalSubmit()">SUBMIT ALL ID</button>
-</div>
+<button class="btn-submit" onclick="sendToBot()">SUBMIT ALL IDs</button>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // শুরুতে ১০টি খালি ঘর
-    function initRows(n) {
-        const tb = document.getElementById('tb');
-        for(let i=1; i<=n; i++) {
+    const paster = document.getElementById('paster');
+    const tbody = document.getElementById('rows');
+
+    // শুরুতেই ১০টি খালি রো
+    function createEmpty() {
+        tbody.innerHTML = "";
+        for(let i=1; i<=10; i++) {
             let tr = document.createElement('tr');
             tr.innerHTML = `<td>${i}</td><td><input class="u"></td><td><input class="p"></td><td><input class="t"></td>`;
-            tb.appendChild(tr);
+            tbody.appendChild(tr);
         }
     }
-    initRows(10);
+    createEmpty();
 
-    // পেস্ট বক্সের লজিক - ম্যাজিকের মতো ডাটা ভাগ হবে
-    document.getElementById('paster').addEventListener('input', function(e) {
-        let val = e.target.value.trim();
-        if(!val) return;
+    // শিট থেকে পেস্ট করার আসল লজিক
+    paster.addEventListener('input', function(e) {
+        let text = e.target.value.trim();
+        if(!text) return;
 
-        let rows = val.split(/\r?\n/);
-        const tb = document.getElementById('tb');
-        tb.innerHTML = ""; // আগের সব ক্লিয়ার
+        let lines = text.split(/\r?\n/);
+        tbody.innerHTML = ""; // টেবিল ক্লিয়ার
 
-        rows.forEach((row, index) => {
-            // ট্যাব বা একাধিক স্পেস দিয়ে স্লিট করা
-            let cols = row.split(/\t+| {2,}/); 
+        lines.forEach((line, index) => {
+            // শিটের ডাটা স্লিট করার জন্য শুধুমাত্র \t (Tab) ব্যবহার করা হয়েছে
+            let cols = line.split('\t'); 
+            
             let tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${index+1}</td>
+                <td style="text-align:center; background:#f9f9f9;">${index+1}</td>
                 <td><input class="u" value="${cols[0] || ''}"></td>
                 <td><input class="p" value="${cols[1] || ''}"></td>
                 <td><input class="t" value="${cols[2] || ''}"></td>
             `;
-            tb.appendChild(tr);
+            tbody.appendChild(tr);
         });
-        
-        // পেস্ট করার পর বক্সটা খালি করে দেওয়া (যাতে হিজিবিজি না লাগে)
+
+        // ১ সেকেন্ড পর বক্স খালি হবে
         setTimeout(() => { e.target.value = ""; }, 1000);
     });
 
-    function finalSubmit() {
+    function sendToBot() {
         let us = document.querySelectorAll('.u');
         let ps = document.querySelectorAll('.p');
         let ts = document.querySelectorAll('.t');
@@ -114,22 +102,12 @@
             }
         }
 
-        if(data.length < 10) { alert("Minimum 10 IDs! You have: " + data.length); return; }
+        if(data.length < 10) { alert("কমপক্ষে ১০ টি আইডি লাগবে!"); return; }
 
         document.getElementById('overlay').style.display = "flex";
-        let i = 0;
-        let interval = setInterval(() => {
-            if(i >= data.length) {
-                clearInterval(interval);
-                document.getElementById('statusMsg').innerText = "✔ ID Submit Successful";
-                tg.sendData(JSON.stringify(data));
-                setTimeout(() => { location.reload(); }, 2000);
-                return;
-            }
-            i++;
-            document.getElementById('pf').style.width = (i/data.length)*100 + "%";
-            document.getElementById('countText').innerText = i + " of " + data.length;
-        }, 100);
+        tg.sendData(JSON.stringify(data));
+        
+        setTimeout(() => { location.reload(); }, 2000);
     }
 </script>
 
