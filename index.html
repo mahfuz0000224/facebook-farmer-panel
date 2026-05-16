@@ -25,8 +25,8 @@
 <body>
 
 <div id="overlay">
-    <h3 id="st">বটের কাছে ডাটা পাঠানো হচ্ছে...</h3>
-    <div id="count">অনুগ্রহ করে অপেক্ষা করুন</div>
+    <h3 id="st">Sending to Bot...</h3>
+    <div id="count">Please wait</div>
 </div>
 
 <div class="header">ID SUBMISSION PANEL</div>
@@ -126,10 +126,9 @@
 
         document.getElementById('overlay').style.display = "flex";
         
-        // বটে ডাটা ট্রান্সফার করা
+        // টেলিগ্রাম বটে ডাটা স্ট্রিং আকারে পাঠানো
         tg.sendData(JSON.stringify(data));
         
-        // ১ সেকেন্ড পর প্যানেল অটো বন্ধ হয়ে যাবে
         setTimeout(() => { tg.close(); }, 1000);
     }
 </script>
