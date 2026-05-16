@@ -9,16 +9,25 @@
         :root { --primary: #1877f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 5px; }
         .header { background: var(--primary); color: white; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
+        
+        /* ছোট আকারের ম্যাজিক পেস্ট বক্স */
         .paste-box { width: 100%; height: 50px; border: 1px solid var(--primary); border-radius: 5px; padding: 5px; box-sizing: border-box; margin-bottom: 5px; background: #fff; font-size: 12px; outline: none; }
+        
+        /* ডাটা টেবিল কন্টেইনার */
         .container { background: white; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; max-height: 60vh; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th { background: #f0f2f5; padding: 4px; border: 1px solid #ddd; font-size: 10px; }
         td { border: 1px solid #ddd; padding: 0; }
+        
+        /* ইনপুট ঘর একদম ছোট এবং কম্প্যাক্ট */
         input { width: 100%; border: none; padding: 6px 2px; outline: none; font-size: 11px; text-align: center; background: transparent; }
+        
         .footer-btns { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
         .btn { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; padding: 12px; font-size: 14px; }
         .btn-add { background: #e4e6eb; color: #050505; }
         .btn-submit { background: var(--primary); color: white; }
+        
+        /* ডাটা প্রসেসিং ওভারলে */
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
@@ -59,6 +68,7 @@
     const tbody = document.getElementById('rows');
     let currentRowCount = 0;
 
+    // নতুন রো বা ঘর বানানোর লজিক
     function createRows(count) {
         for(let i=0; i<count; i++) {
             currentRowCount++;
@@ -73,18 +83,22 @@
         }
     }
 
-    createRows(50); // শুরুতে ৫০ ঘর
+    // অ্যাপ ওপেন হলেই ৫০টি খালি ঘর রেডি থাকবে
+    createRows(50); 
 
+    // বাটন চাপলে ২০টি ঘর নিচে বাড়বে
     function increaseRows() {
         createRows(20);
     }
 
+    // গুগল শিট থেকে ট্যাব স্পেস চিনে ডাটা সাজানোর ম্যাজিক লজিক
     document.getElementById('paster').addEventListener('input', function(e) {
         let text = e.target.value.trim();
         if(!text) return;
 
         let lines = text.split(/\r?\n/);
         
+        // পেস্ট করা ডাটা বেশি হলে অটোমেটিক ঘর বেড়ে যাবে
         if (lines.length > currentRowCount) {
             createRows(lines.length - currentRowCount + 5);
         }
@@ -100,9 +114,11 @@
             if(tInputs[index]) tInputs[index].value = cols[2] || '';
         });
 
+        // পেস্ট হওয়ার পর বক্সটি ক্লিয়ার হবে
         setTimeout(() => { e.target.value = ""; }, 800);
     });
 
+    // বটের কাছে ট্র্যাকার মেসেজসহ ডাটা পাঠানোর লজিক
     function sendToBot() {
         let us = document.querySelectorAll('.u');
         let ps = document.querySelectorAll('.p');
@@ -126,10 +142,20 @@
 
         document.getElementById('overlay').style.display = "flex";
         
-        // টেলিগ্রাম বটে ডাটা স্ট্রিং আকারে পাঠানো
-        tg.sendData(JSON.stringify(data));
-        
-        setTimeout(() => { tg.close(); }, 1000);
+        // ট্র্যাকিং অ্যালার্ট এবং ডাটা ট্রান্সফার
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.sendData(JSON.stringify(data));
+                alert("Front-end Success: ডাটা টেলিগ্রাম সার্ভারে পাঠানো হয়েছে। এবার বটের পালা!");
+                setTimeout(() => { window.Telegram.WebApp.close(); }, 1000);
+            } else {
+                alert("Error: টেলিগ্রাম ওয়েবলজিক খুঁজে পাওয়া যায়নি। অ্যাপটি বটের ভেতর থেকে ওপেন করুন।");
+                document.getElementById('overlay').style.display = "none";
+            }
+        } catch (error) {
+            alert("ক্রিটিক্যাল এরর: " + error.message);
+            document.getElementById('overlay').style.boxDisplay = "none";
+        }
     }
 </script>
 </body>
