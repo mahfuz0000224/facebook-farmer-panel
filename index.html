@@ -9,36 +9,29 @@
         :root { --primary: #1877f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 5px; }
         .header { background: var(--primary); color: white; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
-        
-        /* পেস্ট বক্স ছোট করা হয়েছে */
         .paste-box { width: 100%; height: 50px; border: 1px solid var(--primary); border-radius: 5px; padding: 5px; box-sizing: border-box; margin-bottom: 5px; background: #fff; font-size: 12px; outline: none; }
-        
         .container { background: white; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; max-height: 60vh; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th { background: #f0f2f5; padding: 4px; border: 1px solid #ddd; font-size: 10px; }
         td { border: 1px solid #ddd; padding: 0; }
-        
-        /* ইনপুট ঘর একদম ছোট */
         input { width: 100%; border: none; padding: 6px 2px; outline: none; font-size: 11px; text-align: center; background: transparent; }
-        
         .footer-btns { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
         .btn { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; padding: 12px; font-size: 14px; }
         .btn-add { background: #e4e6eb; color: #050505; }
         .btn-submit { background: var(--primary); color: white; }
-        
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <h3 id="st">Processing...</h3>
-    <div id="count">0 of 0</div>
+    <h3 id="st">বটের কাছে ডাটা পাঠানো হচ্ছে...</h3>
+    <div id="count">অনুগ্রহ করে অপেক্ষা করুন</div>
 </div>
 
 <div class="header">ID SUBMISSION PANEL</div>
 
-<textarea class="paste-box" id="paster" placeholder="শিট থেকে কপি করে এখানে পেস্ট করুন..."></textarea>
+<textarea class="paste-box" id="paster" placeholder="গুগল শিট থেকে কপি করে এখানে পেস্ট করুন..."></textarea>
 
 <div class="container">
     <table>
@@ -66,7 +59,6 @@
     const tbody = document.getElementById('rows');
     let currentRowCount = 0;
 
-    // ঘর তৈরি করার ফাংশন
     function createRows(count) {
         for(let i=0; i<count; i++) {
             currentRowCount++;
@@ -81,22 +73,18 @@
         }
     }
 
-    // শুরুতে ৫০টি ঘর
-    createRows(50);
+    createRows(50); // শুরুতে ৫০ ঘর
 
-    // ২০টি করে ঘর বাড়ানো
     function increaseRows() {
         createRows(20);
     }
 
-    // পেস্ট লজিক
     document.getElementById('paster').addEventListener('input', function(e) {
         let text = e.target.value.trim();
         if(!text) return;
 
         let lines = text.split(/\r?\n/);
         
-        // যদি পেস্ট করা ডাটা বর্তমান ঘরের চেয়ে বেশি হয়, তবে অটোমেটিক ঘর বাড়ানো
         if (lines.length > currentRowCount) {
             createRows(lines.length - currentRowCount + 5);
         }
@@ -123,7 +111,11 @@
 
         for(let i=0; i<us.length; i++) {
             if(us[i].value.trim() !== "") {
-                data.push({u: us[i].value.trim(), p: ps[i].value.trim(), t: ts[i].value.trim()});
+                data.push({
+                    u: us[i].value.trim(), 
+                    p: ps[i].value.trim(), 
+                    t: ts[i].value.trim()
+                });
             }
         }
 
@@ -133,10 +125,13 @@
         }
 
         document.getElementById('overlay').style.display = "flex";
+        
+        // বটে ডাটা ট্রান্সফার করা
         tg.sendData(JSON.stringify(data));
-        setTimeout(() => { location.reload(); }, 2000);
+        
+        // ১ সেকেন্ড পর প্যানেল অটো বন্ধ হয়ে যাবে
+        setTimeout(() => { tg.close(); }, 1000);
     }
 </script>
-
 </body>
 </html>
