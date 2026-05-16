@@ -10,7 +10,7 @@
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 5px; }
         .header { background: var(--primary); color: white; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
         
-        /* ছোট আকারের ম্যাজিক পেস্ট বক্স */
+        /* ছোট আকারের ম্যাজিক পেস্ট باکس */
         .paste-box { width: 100%; height: 50px; border: 1px solid var(--primary); border-radius: 5px; padding: 5px; box-sizing: border-box; margin-bottom: 5px; background: #fff; font-size: 12px; outline: none; }
         
         /* ডাটা টেবিল কন্টেইনার */
@@ -47,9 +47,10 @@
         .loader-content {
             text-align: center;
             color: #ffffff;
+            padding: 0 20px;
         }
 
-        /* নিওন স্পিনার */
+        /* নিওন স্পন্টার */
         .neon-spinner {
             width: 50px;
             height: 50px;
@@ -70,9 +71,10 @@
         }
 
         #loader-text {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             margin: 0;
+            line-height: 1.4;
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
         }
 
@@ -206,25 +208,28 @@
             return; 
         }
 
-        // গ্লাস-মরফিজম ব্লুর ওভারলে অন করা হলো
+        // গ্লাস-মরফিজম ব্লুর ওভারলে অন করা হলো (লোডিং শুরু)
         document.getElementById('custom-overlay').style.display = "flex";
+        document.getElementById("loader-text").innerHTML = "⏳ সার্ভারে ডাটা পাঠানো হচ্ছে...";
         
         try {
             if (window.Telegram && window.Telegram.WebApp) {
-                // ১. টেলিগ্রাম ব্যাকএন্ডে ডাটা পাঠানো হলো
-                window.Telegram.WebApp.sendData(JSON.stringify(data));
                 
-                // ২. নতুন টাইমিং: ঠিক ১০ সেকেন্ড (১০,০০০ মিলি-সেকেন্ড) চাকা ঘুরবে
+                // ১. প্রথম স্টেপ: ঠিক ১০ সেকেন্ড (১০,০০০ মিলি-সেকেন্ড) লোডিং চাকা ঘুরবে
                 setTimeout(function() {
                     var spinner = document.querySelector(".neon-spinner");
                     if(spinner) {
-                        spinner.classList.add("success"); // চাকা সবুজ হবে
+                        spinner.classList.add("success"); // স্পিনারের কালার সবুজ (গ্রিন গ্লো) হবে
                     }
-                    document.getElementById("loader-text").innerHTML = "🎉 সফলভাবে সাবমিট হয়েছে!";
+                    
+                    // আপনার কাঙ্ক্ষিত সাকসেস মেসেজটি এখানে সেট করা হলো
+                    document.getElementById("loader-text").innerHTML = "✅ আপনার সব আইডি আলাদা আলাদাভাবে সাবমিট সম্পন্ন হয়েছে। অনুগ্রহ করে এডমিন রিভিউ পর্যন্ত অপেক্ষা করুন।";
 
-                    // ৩. নতুন টাইমিং: সফল হওয়ার পর ঠিক ৩ সেকেন্ড (৩,০০০ মিলি-সেকেন্ড) স্ক্রিন দেখাবে
+                    // ২. দ্বিতীয় স্টেপ: সাকসেস মেসেজটি ঠিক ৩ সেকেন্ড (৩,০০০ মিলি-সেকেন্ড) স্ক্রিনে থাকবে
                     setTimeout(function() {
-                        window.Telegram.WebApp.close(); // প্যানেল বন্ধ হয়ে যাবে
+                        // ৩. একদম শেষ মুহূর্তে ডাটা টেলিগ্রামে যাবে এবং মিনি অ্যাপটি বন্ধ হবে
+                        window.Telegram.WebApp.sendData(JSON.stringify(data));
+                        window.Telegram.WebApp.close(); 
                     }, 3000);
 
                 }, 10000);
